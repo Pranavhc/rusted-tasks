@@ -3,8 +3,8 @@ mod task;
 mod ui;
 
 use pancurses::{
-    curs_set, echo, endwin, init_pair, initscr, noecho, start_color, Input, Window, COLOR_BLACK,
-    COLOR_MAGENTA, COLOR_WHITE, COLOR_YELLOW,
+    curs_set, endwin, init_pair, initscr, noecho, start_color, Input, COLOR_BLACK, COLOR_MAGENTA,
+    COLOR_WHITE, COLOR_YELLOW,
 };
 
 use task::Task;
@@ -38,20 +38,20 @@ fn toggle_status(tasks: &mut Vec<Task>, curr_id: &usize) {
     }
 }
 
-fn add_task(window: &Window, tasks: &mut Vec<Task>, text: &mut String) {
-    echo();
-    match window.getch() {
-        Some(Input::Character(c)) => {
-            if c != '\n' {
-                text.push(c)
-            }
-        }
-        _ => (),
-    }
-    tasks.push(Task::new(text));
-    // *text = String::new();
-    noecho();
-}
+// fn add_task(window: &Window, tasks: &mut Vec<Task>, text: &mut String) {
+//     echo();
+//     match window.getch() {
+//         Some(Input::Character(c)) => {
+//             if c != '\n' {
+//                 text.push(c)
+//             }
+//         }
+//         _ => (),
+//     }
+//     tasks.push(Task::new(text));
+//     // *text = String::new();
+//     noecho();
+// }
 
 fn main() {
     let mut tasks: Vec<Task> = vec![
@@ -66,7 +66,7 @@ fn main() {
     let window = initscr();
     window.keypad(true);
 
-    let mut new_str = String::new();
+    // let mut new_str = String::new();
 
     start_color();
     init_pair(REGULAR_PAIR as i16, COLOR_WHITE, COLOR_BLACK);
@@ -123,5 +123,4 @@ fn main() {
         }
     }
     endwin();
-    println!("new_str = {}", new_str);
 }
