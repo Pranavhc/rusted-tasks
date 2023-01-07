@@ -38,21 +38,6 @@ fn toggle_status(tasks: &mut Vec<Task>, curr_id: &usize) {
     }
 }
 
-// fn add_task(window: &Window, tasks: &mut Vec<Task>, text: &mut String) {
-//     echo();
-//     match window.getch() {
-//         Some(Input::Character(c)) => {
-//             if c != '\n' {
-//                 text.push(c)
-//             }
-//         }
-//         _ => (),
-//     }
-//     tasks.push(Task::new(text));
-//     // *text = String::new();
-//     noecho();
-// }
-
 fn main() {
     let mut tasks: Vec<Task> = vec![
         Task::new("Take a shower"),
@@ -118,7 +103,6 @@ fn main() {
             Some(Input::Character('s') | Input::KeyDown) => list_down(&mut curr_id, &tasks.len()),
             Some(Input::Character('d')) => remove_task(&mut tasks, &mut curr_id),
             Some(Input::Character('\n')) => toggle_status(&mut tasks, &curr_id),
-            // Some(Input::Character('a')) => add_task(&window, &mut tasks, &mut new_str),
             None | _ => (),
         }
     }
