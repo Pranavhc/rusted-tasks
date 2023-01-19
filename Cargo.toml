@@ -3,7 +3,14 @@ name = "rusted-tasks"
 version = "0.1.0"
 edition = "2021"
 
+[dependencies]
+serde_json = "1.0.91"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.serde]
+version = "1.0.152"
+features = ["derive"]
 
 [dependencies.pancurses]
 version = "0.17"

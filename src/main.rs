@@ -1,80 +1,36 @@
+mod task;
+mod ui;
+
 extern crate pancurses;
+extern crate serde;
 use pancurses::{
     curs_set, endwin, init_pair, initscr, noecho, start_color, Input, Window, COLOR_BLACK,
-    COLOR_MAGENTA, COLOR_PAIR, COLOR_WHITE, COLOR_YELLOW,
+    COLOR_RED, COLOR_WHITE, COLOR_YELLOW,
 };
+use std::fs::{self, File};
 use std::process::exit;
+use task::Task;
+use ui::UI;
 
-// - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct Task {
-    pub text: String,
-    pub status: char,
+fn write_tasks_to_file(path: &String, tasks: &Vec<Task>) {
+    fs::write(
+        path,
+        serde_json::to_string_pretty(tasks).expect("serde to string failed!"),
+    )
+    .expect("Couldn't write!");
 }
 
-impl Task {
-    fn new(task: &str) -> Self {
-        Self {
-            text: task.trim().to_string(),
-            status: '×',
-        }
-    }
+fn read_tasks_from_file(path: &String) -> Result<Vec<Task>, Vec<Task>> {
+    let file = fs::File::open(path).expect("Couldn't open file");
+    let tasks =
+        serde_json::from_reader::<File, Vec<Task>>(file).or::<Vec<Task>>(Ok(Vec::<Task>::new()));
 
-    fn toggle_status(&mut self) {
-        self.status = if self.status == '✓' { '×' } else { '✓' };
-    }
+    tasks
 }
 
-// - - - - -
-
-const REGULAR_PAIR: u64 = 0;
-const HIGHLIGHT_PAIR: u64 = 1;
-const TITLE_PAIR: u64 = 2;
-const INFO_PAIR: u64 = 3;
-
-#[derive(Default)]
-struct UI {
-    curr_task: Option<usize>,
-    row: usize,
-}
-
-impl UI {
-    // row is where ui starts redering
-    fn begin(&mut self, row: usize) {
-        self.row = row;
-    }
-
-    // list starts from given index
-    fn begin_list(&mut self, id: usize) {
-        self.curr_task = Some(id);
-    }
-
-    // print element based on whether it should be regular or highlighted
-    fn print_element(&mut self, win: &Window, text: &str, id: usize) {
-        let curr_id = self.curr_task.expect("error!");
-        let pair = if curr_id == id {
-            HIGHLIGHT_PAIR
-        } else {
-            REGULAR_PAIR
-        };
-        self.label(win, text, pair);
-    }
-
-    // prints the row
-    fn label(&mut self, win: &Window, text: &str, pair: u64) {
-        win.mv(self.row as i32, 0);
-        win.attron(COLOR_PAIR(pair));
-        win.addstr(text);
-        win.attroff(COLOR_PAIR(pair));
-        self.row += 1;
-    }
-
-    fn end_list(&mut self) {
-        self.curr_task = None;
-    }
-}
-
-// - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 fn list_up(curr_id: &mut usize) {
     if *curr_id > 0 {
@@ -101,68 +57,78 @@ fn toggle_status(tasks: &mut Vec<Task>, curr_id: &usize) {
     }
 }
 
-// - - - - -
+fn handle_args(tasks: &mut Vec<Task>) {
+    let args: Vec<String> = std::env::args().collect();
+    let options = vec!["-a [string]: add a new task", "-h: help"];
 
-fn main() {
-    let mut tasks: Vec<Task> = vec![
-        Task::new("Take a shower"),
-        Task::new("Eat lunch"),
-        Task::new("Code all day"),
-        Task::new("get ready for today"),
-        Task::new("I have a test in week and I havn't studied! shit!"),
-        Task::new("study for exam"),
-    ];
+    let help_exit = || {
+        println!("\n[Options Available]:");
+        for i in options {
+            println!("  {}", i);
+        }
+        exit(0);
+    };
 
-    {
-        let args: Vec<String> = std::env::args().collect();
-        let options = vec!["-a [string]: add a new task", "-h: help"];
-
-        let help_exit = || {
-            println!("\n[Options Available]:");
-            for i in options {
-                println!("  {}", i);
-            }
-            exit(0);
-        };
-
-        if args.len() > 1 {
-            match args[1].as_str() {
-                "-a" => {
-                    if args.len() > 2 && !args[2].is_empty() {
-                        tasks.push(Task::new(&args[2]))
-                    } else {
-                        help_exit()
-                    }
+    if args.len() > 1 {
+        match args[1].as_str() {
+            "-a" => {
+                if args.len() > 2 && !args[2].is_empty() {
+                    tasks.push(Task::new(&args[2]));
+                    write_tasks_to_file(&"data.json".to_owned(), tasks);
+                    println!("Added task successfully!");
+                    exit(0);
+                } else {
+                    help_exit()
                 }
-                "-h" | _ => help_exit(),
             }
+            "-h" | _ => help_exit(),
         }
     }
+}
 
+fn create_window() -> Window {
     let win = initscr();
     win.keypad(true);
 
     start_color();
-    init_pair(REGULAR_PAIR as i16, COLOR_WHITE, COLOR_BLACK);
-    init_pair(HIGHLIGHT_PAIR as i16, COLOR_BLACK, COLOR_YELLOW);
-    init_pair(TITLE_PAIR as i16, COLOR_BLACK, COLOR_WHITE);
-    init_pair(INFO_PAIR as i16, COLOR_WHITE, COLOR_MAGENTA);
+    init_pair(ui::REGULAR_PAIR as i16, COLOR_WHITE, COLOR_BLACK);
+    init_pair(ui::HIGHLIGHT_PAIR as i16, COLOR_BLACK, COLOR_YELLOW);
+    init_pair(ui::TITLE_PAIR as i16, COLOR_BLACK, COLOR_WHITE);
+    init_pair(ui::INFO_PAIR as i16, COLOR_WHITE, COLOR_RED);
 
     curs_set(0);
     noecho();
 
+    win
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+fn main() {
+    let file_path = "data.json".to_owned();
+
+    match std::fs::File::open(&file_path) {
+        Ok(file) => file,
+        Err(_) => std::fs::File::create(&file_path).unwrap(),
+    };
+
+    let mut tasks: Vec<Task> = read_tasks_from_file(&file_path).unwrap();
+    handle_args(&mut tasks);
+
+    let win = create_window();
     let mut ui = UI::default();
-    let mut quit = false;
+
     let mut curr_id: usize = 0;
+    let mut quit = false;
 
     while !quit {
         win.erase();
-
         ui.begin(1);
-        {
-            ui.label(&win, "  ALL TASKS [↑/↓ | q: exit ]  ", TITLE_PAIR);
 
-            ui.label(&win, "\n", REGULAR_PAIR);
+        {
+            ui.label(&win, "  ALL TASKS [↑/↓ | q: exit ]  ", ui::TITLE_PAIR);
+
+            ui.label(&win, "\n", ui::REGULAR_PAIR);
             ui.begin_list(curr_id);
 
             if tasks.len() > 0 {
@@ -172,16 +138,19 @@ fn main() {
             } else {
                 ui.print_element(&win, " [×] -a [string]: from args to add a new task ", 69);
                 ui.print_element(&win, " [×]  t | Enter: toggle task status", 69);
-                ui.print_element(&win, " [×]  q: exit | d: delete task", 69);
+                ui.print_element(&win, " [×]  q: save & exit | d: delete task", 69);
             }
-
-            ui.label(&win, &format!("\n Tasks: {}  ", tasks.len()), INFO_PAIR);
+            ui.label(&win, &format!("\n Tasks: {}  ", tasks.len()), ui::INFO_PAIR);
             ui.end_list();
         }
+
         win.refresh();
 
         match win.getch() {
-            Some(Input::Character('q') | Input::KeyExit) => quit = true,
+            Some(Input::Character('q') | Input::KeyExit) => {
+                quit = true;
+                write_tasks_to_file(&"data.json".to_owned(), &tasks);
+            }
             Some(Input::Character('d')) => remove_task(&mut tasks, &mut curr_id),
             Some(Input::Character('k') | Input::KeyUp) => list_up(&mut curr_id),
             Some(Input::Character('j') | Input::KeyDown) => list_down(&mut curr_id, &tasks.len()),
