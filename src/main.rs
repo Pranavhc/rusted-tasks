@@ -1,8 +1,6 @@
 mod task;
 mod ui;
 
-extern crate pancurses;
-extern crate serde;
 use pancurses::{
     curs_set, endwin, init_pair, initscr, noecho, start_color, Input, Window, COLOR_BLACK,
     COLOR_RED, COLOR_WHITE, COLOR_YELLOW,
@@ -14,34 +12,28 @@ use ui::UI;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-fn write_tasks_to_file(path: &String, tasks: &Vec<Task>) {
-    fs::write(
-        path,
-        serde_json::to_string_pretty(tasks).expect("serde to string failed!"),
-    )
-    .expect("Couldn't write!");
+const FILE_PATH: &str = "data.json";
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+fn write_tasks_to_file(path: &str, tasks: &Vec<Task>) {
+    let contents: String = serde_json::to_string_pretty(tasks).expect("serde to string failed!");
+    fs::write(path, contents).expect("Couldn't write!");
 }
 
-fn read_tasks_from_file(path: &String) -> Result<Vec<Task>, Vec<Task>> {
-    let file = fs::File::open(path).expect("Couldn't open file");
-    let tasks =
-        serde_json::from_reader::<File, Vec<Task>>(file).or::<Vec<Task>>(Ok(Vec::<Task>::new()));
-
-    tasks
+fn read_tasks_from_file(path: &str) -> Result<Vec<Task>, serde_json::Error> {
+    let file: File = fs::File::open(path).expect("Couldn't open file");
+    serde_json::from_reader::<File, Vec<Task>>(file)
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 fn list_up(curr_id: &mut usize) {
-    if *curr_id > 0 {
-        *curr_id -= 1;
-    };
+    if *curr_id > 0 { *curr_id -= 1 };
 }
 
 fn list_down(curr_id: &mut usize, len: &usize) {
-    if *curr_id + 1 < *len {
-        *curr_id += 1;
-    };
+    if *curr_id + 1 < *len { *curr_id += 1 };
 }
 
 fn remove_task(tasks: &mut Vec<Task>, curr_id: &mut usize) {
@@ -52,20 +44,16 @@ fn remove_task(tasks: &mut Vec<Task>, curr_id: &mut usize) {
 }
 
 fn toggle_status(tasks: &mut Vec<Task>, curr_id: &usize) {
-    if tasks.len() > 0 {
-        tasks[*curr_id].toggle_status()
-    }
+    if tasks.len() > 0 { tasks[*curr_id].toggle_status() }
 }
 
 fn handle_args(tasks: &mut Vec<Task>) {
     let args: Vec<String> = std::env::args().collect();
-    let options = vec!["-a [string]: add a new task", "-h: help"];
+    let options: Vec<&str> = vec!["-a [string]: add a new task", "-h: help"];
 
     let help_exit = || {
         println!("\n[Options Available]:");
-        for i in options {
-            println!("  {}", i);
-        }
+        for i in options { println!("  {}", i) }
         exit(0);
     };
 
@@ -74,12 +62,10 @@ fn handle_args(tasks: &mut Vec<Task>) {
             "-a" => {
                 if args.len() > 2 && !args[2].is_empty() {
                     tasks.push(Task::new(&args[2]));
-                    write_tasks_to_file(&"data.json".to_owned(), tasks);
+                    write_tasks_to_file(&FILE_PATH.to_owned(), tasks);
                     println!("Added task successfully!");
                     exit(0);
-                } else {
-                    help_exit()
-                }
+                } else { help_exit() }
             }
             "-h" | _ => help_exit(),
         }
@@ -87,7 +73,7 @@ fn handle_args(tasks: &mut Vec<Task>) {
 }
 
 fn create_window() -> Window {
-    let win = initscr();
+    let win: Window = initscr();
     win.keypad(true);
 
     start_color();
@@ -105,21 +91,19 @@ fn create_window() -> Window {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 fn main() {
-    let file_path = "data.json".to_owned();
-
-    match std::fs::File::open(&file_path) {
+    match std::fs::File::open(FILE_PATH) {
         Ok(file) => file,
-        Err(_) => std::fs::File::create(&file_path).unwrap(),
+        Err(_) => std::fs::File::create(FILE_PATH).unwrap(),
     };
 
-    let mut tasks: Vec<Task> = read_tasks_from_file(&file_path).unwrap();
+    let mut tasks: Vec<Task> = read_tasks_from_file(FILE_PATH).unwrap_or(Vec::new());
     handle_args(&mut tasks);
 
-    let win = create_window();
-    let mut ui = UI::default();
+    let win: Window = create_window();
+    let mut ui: UI = UI::default();
 
     let mut curr_id: usize = 0;
-    let mut quit = false;
+    let mut quit: bool = false;
 
     while !quit {
         win.erase();
@@ -147,14 +131,14 @@ fn main() {
         win.refresh();
 
         match win.getch() {
-            Some(Input::Character('q') | Input::KeyExit) => {
-                quit = true;
-                write_tasks_to_file(&"data.json".to_owned(), &tasks);
-            }
             Some(Input::Character('d')) => remove_task(&mut tasks, &mut curr_id),
             Some(Input::Character('k') | Input::KeyUp) => list_up(&mut curr_id),
             Some(Input::Character('j') | Input::KeyDown) => list_down(&mut curr_id, &tasks.len()),
             Some(Input::Character('t' | '\n')) => toggle_status(&mut tasks, &curr_id),
+            Some(Input::Character('q') | Input::KeyExit) => {
+                quit = true;
+                write_tasks_to_file(FILE_PATH, &tasks);
+            }
             None | _ => (),
         }
     }
