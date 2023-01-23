@@ -1,6 +1,6 @@
 The BEERWARE License (BEERWARE)
 
-Copyright (c) 2023 Author. All rights reserved.
+Copyright (c) 2023 @Pranavhc. All rights reserved.
 
 Licensed under the "THE BEER-WARE LICENSE" (Revision 42):
 @Pranavhc wrote this file. As long as you retain this notice you
