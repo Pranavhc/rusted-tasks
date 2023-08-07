@@ -29,11 +29,15 @@ fn read_tasks_from_file(path: &str) -> Result<Vec<Task>, serde_json::Error> {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 fn list_up(curr_id: &mut usize) {
-    if *curr_id > 0 { *curr_id -= 1 };
+    if *curr_id > 0 {
+        *curr_id -= 1
+    };
 }
 
 fn list_down(curr_id: &mut usize, len: &usize) {
-    if *curr_id + 1 < *len { *curr_id += 1 };
+    if *curr_id + 1 < *len {
+        *curr_id += 1
+    };
 }
 
 fn remove_task(tasks: &mut Vec<Task>, curr_id: &mut usize) {
@@ -44,7 +48,9 @@ fn remove_task(tasks: &mut Vec<Task>, curr_id: &mut usize) {
 }
 
 fn toggle_status(tasks: &mut Vec<Task>, curr_id: &usize) {
-    if tasks.len() > 0 { tasks[*curr_id].toggle_status() }
+    if tasks.len() > 0 {
+        tasks[*curr_id].toggle_status()
+    }
 }
 
 fn handle_args(tasks: &mut Vec<Task>) {
@@ -53,7 +59,9 @@ fn handle_args(tasks: &mut Vec<Task>) {
 
     let help_exit = || {
         println!("\n[Options Available]:");
-        for i in options { println!("  {}", i) }
+        for i in options {
+            println!("  {}", i)
+        }
         exit(0);
     };
 
@@ -65,7 +73,9 @@ fn handle_args(tasks: &mut Vec<Task>) {
                     write_tasks_to_file(&FILE_PATH.to_owned(), tasks);
                     println!("Added task successfully!");
                     exit(0);
-                } else { help_exit() }
+                } else {
+                    help_exit()
+                }
             }
             "-h" | _ => help_exit(),
         }
