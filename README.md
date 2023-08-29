@@ -1,6 +1,6 @@
 # rusted-tasks 
 
-!["Alt screenshot"](./preview.png)
+!["Alt screenshot"](https://github.com/Pranavhc/rusted-tasks/blob/c2985778e8c5cb3e6e30f9e0877e7c8a632dd264/preview.png)
 
 <h5>A CLI todo-list app written in Rust. Uses <a href="https://crates.io/crates/pancurses">Pancurses</a>.</h5>
 
