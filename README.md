@@ -9,6 +9,8 @@
   &nbsp;&nbsp;1. Clone the repository.
   </br>
   &nbsp;&nbsp;2. Execute the <code>cargo run</code> command.
+  </br>
+  &nbsp;&nbsp;3. Or <code>cargo build</code> to use the `rusted-tasks.exe` which you'll find in the `\target` directory.
 </p>  
 
 
