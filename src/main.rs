@@ -93,7 +93,7 @@ fn toggle_status(tasks: &mut Vec<Task>, curr_id: &usize) {
 
 fn handle_args(tasks: &mut Vec<Task>) {
     let args: Vec<String> = std::env::args().collect();
-    let options: Vec<&str> = vec!["-a [string]: add a new task", "-h: help"];
+    let options: Vec<&str> = vec!["-a [string]: add a new task from args", "-h: help"];
 
     let help_exit = || {
         println!("\n[Options Available]:");
@@ -175,10 +175,10 @@ fn main() {
             } else {
                 ui.label(&win, " <-- CONTROLS --> ", ui::TITLE_PAIR);
                 ui.label(&win, "\n", ui::REGULAR_PAIR);
-                ui.label(&win, " <a> : Add a new task", ui::UNIQUE_PAIR);
-                ui.label(&win, " <t> : Toggle task status", ui::UNIQUE_PAIR);
-                ui.label(&win, " <d> : Delete Task", ui::UNIQUE_PAIR);
-                ui.label(&win, " <q> : Save & Exit", ui::UNIQUE_PAIR);
+                ui.label(&win, " <shift + a> : Add a new task", ui::UNIQUE_PAIR);
+                ui.label(&win, " <shift + t> : Toggle task status", ui::UNIQUE_PAIR);
+                ui.label(&win, " <shift + d> : Delete Task", ui::UNIQUE_PAIR);
+                ui.label(&win, " <shift + q> : Save & Exit", ui::UNIQUE_PAIR);
             }
 
             ui.end_list();
