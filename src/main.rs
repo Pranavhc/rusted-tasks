@@ -1,20 +1,17 @@
 mod task;
 mod ui;
 
+use task::Task;
+use ui::UI;
+
 use pancurses::{
-    curs_set, endwin, init_pair, initscr, noecho, start_color, Input, Window, COLOR_BLACK,
+    curs_set, endwin, init_pair, initscr, newwin, noecho, start_color, Input, Window, COLOR_BLACK,
     COLOR_RED, COLOR_WHITE, COLOR_YELLOW,
 };
 use std::fs::{self, File};
 use std::process::exit;
-use task::Task;
-use ui::UI;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 const FILE_PATH: &str = "rtasks.json";
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 fn write_tasks_to_file(path: &str, tasks: &Vec<Task>) {
     let contents: String = serde_json::to_string_pretty(tasks).expect("serde to string failed!");
@@ -25,8 +22,6 @@ fn read_tasks_from_file(path: &str) -> Result<Vec<Task>, serde_json::Error> {
     let file: File = fs::File::open(path).expect("Couldn't open file");
     serde_json::from_reader::<File, Vec<Task>>(file)
 }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 fn list_up(curr_id: &mut usize) {
     if *curr_id > 0 {
@@ -40,10 +35,53 @@ fn list_down(curr_id: &mut usize, len: &usize) {
     };
 }
 
+fn add_task(tasks: &mut Vec<Task>) {
+    let border_window = newwin(4, 62, 10, 10);
+    border_window.draw_box(0, 0);
+    border_window.refresh();
+
+    let window = border_window.derwin(2, 60, 1, 1).unwrap();
+    window.color_set(ui::UNIQUE_PAIR as i16);
+
+    curs_set(1);
+
+    let mut input = String::new();
+
+    loop {
+        match window.getch() {
+            Some(Input::Character('\n')) => {
+                if input.len() > 0 {
+                    tasks.push(Task::new(&input))
+                }
+                curs_set(0);
+                break;
+            }
+            Some(Input::Character(c)) => {
+                if c == '\u{8}' || c == '\u{7f}' {
+                    if !input.is_empty() {
+                        input.pop();
+
+                        let (y, x) = window.get_cur_yx();
+                        if x > 0 {
+                            window.mv(y, x - 1); // move back
+                            window.delch(); // delete current char
+                        }
+                    }
+                } else {
+                    window.color_set(ui::REGULAR_PAIR as i16);
+                    input.push(c);
+                    window.addch(c);
+                }
+            }
+            _ => (),
+        }
+    }
+}
+
 fn remove_task(tasks: &mut Vec<Task>, curr_id: &mut usize) {
     if tasks.len() > 0 {
         tasks.remove(*curr_id);
-        list_up(curr_id);
+        list_up(curr_id); // select the previous task
     }
 }
 
@@ -91,14 +129,13 @@ fn create_window() -> Window {
     init_pair(ui::HIGHLIGHT_PAIR as i16, COLOR_BLACK, COLOR_YELLOW);
     init_pair(ui::TITLE_PAIR as i16, COLOR_BLACK, COLOR_WHITE);
     init_pair(ui::INFO_PAIR as i16, COLOR_WHITE, COLOR_RED);
+    init_pair(ui::UNIQUE_PAIR as i16, COLOR_YELLOW, COLOR_BLACK);
 
     curs_set(0);
     noecho();
 
     win
 }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 fn main() {
     match std::fs::File::open(FILE_PATH) {
@@ -117,10 +154,16 @@ fn main() {
 
     while !quit {
         win.erase();
-        ui.begin(1);
+        ui.begin(0);
 
         {
-            ui.label(&win, "  ALL TASKS [↑/↓ | q: exit ]  ", ui::TITLE_PAIR);
+            if tasks.len() > 0 {
+                ui.label(
+                    &win,
+                    &format!(" [↑/↓] ALL TASKS: {} ", tasks.len()),
+                    ui::TITLE_PAIR,
+                );
+            }
 
             ui.label(&win, "\n", ui::REGULAR_PAIR);
             ui.begin_list(curr_id);
@@ -130,24 +173,30 @@ fn main() {
                     ui.print_element(&win, &format!(" [{}] {} ", task.status, task.text), index);
                 }
             } else {
-                ui.print_element(&win, " [×] -a [string]: from args to add a new task ", 69);
-                ui.print_element(&win, " [×]  t | Enter: toggle task status", 69);
-                ui.print_element(&win, " [×]  q: save & exit | d: delete task", 69);
+                ui.label(&win, " <-- CONTROLS --> ", ui::TITLE_PAIR);
+                ui.label(&win, "\n", ui::REGULAR_PAIR);
+                ui.label(&win, " <a> : Add a new task", ui::UNIQUE_PAIR);
+                ui.label(&win, " <t> : Toggle task status", ui::UNIQUE_PAIR);
+                ui.label(&win, " <d> : Delete Task", ui::UNIQUE_PAIR);
+                ui.label(&win, " <q> : Save & Exit", ui::UNIQUE_PAIR);
             }
-            ui.label(&win, &format!("\n Tasks: {}  ", tasks.len()), ui::INFO_PAIR);
+
             ui.end_list();
         }
 
         win.refresh();
 
         match win.getch() {
-            Some(Input::Character('d')) => remove_task(&mut tasks, &mut curr_id),
+            // capital keys give an effect of composed keys (like shift + key)
+            Some(Input::Character('A')) => add_task(&mut tasks),
+            Some(Input::Character('D')) => remove_task(&mut tasks, &mut curr_id),
+            Some(Input::Character('T' | '\n')) => toggle_status(&mut tasks, &curr_id),
             Some(Input::Character('k') | Input::KeyUp) => list_up(&mut curr_id),
             Some(Input::Character('j') | Input::KeyDown) => list_down(&mut curr_id, &tasks.len()),
-            Some(Input::Character('t' | '\n')) => toggle_status(&mut tasks, &curr_id),
-            Some(Input::Character('q') | Input::KeyExit) => {
-                quit = true;
+            Some(Input::Character('S')) => write_tasks_to_file(FILE_PATH, &tasks),
+            Some(Input::Character('Q') | Input::KeyExit) => {
                 write_tasks_to_file(FILE_PATH, &tasks);
+                quit = true;
             }
             None | _ => (),
         }
