@@ -30,5 +30,5 @@ Navigation
 
 #### Command line args
 
-1. `-h` : Show help message. `rust rusted-tasks -h`
-2. `-a` : Add a new task. `rusted-tasks -a "task message"`
+1. `-h` : Show help message. `$ rust rusted-tasks -h`
+2. `-a` : Add a new task. `$ rusted-tasks -a "task message"`
