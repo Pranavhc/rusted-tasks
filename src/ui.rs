@@ -1,10 +1,10 @@
 use pancurses::{Window, COLOR_PAIR};
 
-pub const REGULAR_PAIR: u64 = 0;
-pub const HIGHLIGHT_PAIR: u64 = 1;
-pub const TITLE_PAIR: u64 = 2;
-pub const INFO_PAIR: u64 = 3;
-pub const UNIQUE_PAIR: u64 = 4;
+pub const REGULAR_PAIR: u32 = 0;
+pub const HIGHLIGHT_PAIR: u32 = 1;
+pub const TITLE_PAIR: u32 = 2;
+pub const INFO_PAIR: u32 = 3;
+pub const UNIQUE_PAIR: u32 = 4;
 
 #[derive(Default)]
 pub(crate) struct UI {
@@ -24,7 +24,7 @@ impl UI {
     }
 
     // prints the row
-    pub fn label(&mut self, win: &Window, text: &str, pair: u64) {
+    pub fn label(&mut self, win: &Window, text: &str, pair: u32) {
         win.mv(self.row as i32, 0);
         win.attron(COLOR_PAIR(pair));
         win.addstr(text);
